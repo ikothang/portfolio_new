@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="EPON Design QC &amp; Validation System: a design tool that checks EPON FTTH pre-designs against the design rules. Project by Hanis Haziera.">
+<meta property="og:title" content="EPON Design QC &amp; Validation System">
+<meta property="og:description" content="A design tool that checks EPON FTTH pre-designs against the design rules as they are drawn.">
+<meta property="og:image" content="shots/1-canvas.png">
+<title>EPON Design QC System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* Layout: a drawing-sheet case study. Hero = live QC demo on a splitter tree; below, a title-block grid of rules, a numbered workflow, and an SLD strip. Fiber colour code (TIA-598) runs as the one bold motif. */
+:root{
+  --paper:#f2f4f1; --sheet:#ffffff; --ink:#132238; --muted:#5a6676; --rule:#d5dbd6; --grid:#e6eae5;
+  --accent:#1f5fd0; --accent-soft:#e3ecfb;
+  --crit:#c62828; --crit-soft:#fbe5e3; --warn:#a96400; --warn-soft:#fdf0d8; --ok:#22783a; --ok-soft:#e1f2e5;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e1622; --sheet:#152131; --ink:#e7edf5; --muted:#9aa8ba; --rule:#2a3a50; --grid:#1b2a3d;
+  --accent:#6ea0ff; --accent-soft:#1a2c4d;
+  --crit:#ff7a70; --crit-soft:#3a1a1c; --warn:#f0b04a; --warn-soft:#38290f; --ok:#6fcf8a; --ok-soft:#14301f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e1622; --sheet:#152131; --ink:#e7edf5; --muted:#9aa8ba; --rule:#2a3a50; --grid:#1b2a3d;
+  --accent:#6ea0ff; --accent-soft:#1a2c4d;
+  --crit:#ff7a70; --crit-soft:#3a1a1c; --warn:#f0b04a; --warn-soft:#38290f; --ok:#6fcf8a; --ok-soft:#14301f; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto}
+.fibers{display:grid;grid-template-columns:repeat(12,1fr);height:6px;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)))}
+.fibers i:nth-child(1){background:#1f6fd1}.fibers i:nth-child(2){background:#f28a1a}.fibers i:nth-child(3){background:#2f9e44}
+.fibers i:nth-child(4){background:#8b5a2b}.fibers i:nth-child(5){background:#7a8691}.fibers i:nth-child(6){background:#e9ecef}
+.fibers i:nth-child(7){background:#d33a2c}.fibers i:nth-child(8){background:#1b1b1b}.fibers i:nth-child(9){background:#f2c511}
+.fibers i:nth-child(10){background:#7b4fc9}.fibers i:nth-child(11){background:#e88aa8}.fibers i:nth-child(12){background:#2fc0c0}
+
+.label{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-stretch:72%;font-weight:850;font-size:clamp(40px,7vw,78px);line-height:.95;letter-spacing:-.01em;text-transform:uppercase}
+h2{font-stretch:80%;font-weight:800;font-size:clamp(28px,4vw,40px);line-height:1.05;text-transform:uppercase}
+h3{font-stretch:90%;font-weight:700;font-size:19px;line-height:1.2}
+p{margin:0;max-width:65ch}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:40px;padding-block:44px 56px;align-items:start}
+.hero-copy{display:grid;gap:20px;min-width:0}
+.hero h1 .blue{color:var(--accent)}
+.lede{font-size:19px;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--mono);font-size:12.5px;padding:5px 10px;border:1px solid var(--rule);border-radius:4px;background:var(--sheet)}
+.who{display:grid;gap:8px;font-size:14.5px;color:var(--muted);border-top:1px solid var(--rule);padding-top:14px}
+.who b{color:var(--ink);font-weight:600}
+
+/* demo sheet */
+.demo{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;min-width:0;box-shadow:0 1px 0 var(--rule),0 18px 40px -28px rgba(19,34,56,.45)}
+.demo-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--rule)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:5px;overflow:hidden}
+.seg button{font:500 13px var(--body);padding:7px 12px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.run{font:600 13px var(--body);padding:7px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer}
+.canvas{position:relative;overflow-x:auto;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+.canvas svg{display:block;width:100%;min-width:520px;height:auto}
+.scan{position:absolute;top:0;bottom:0;width:3px;left:0;background:var(--accent);opacity:0;pointer-events:none}
+.scan.go{animation:scan 1.1s ease-in-out}
+@keyframes scan{0%{opacity:.8;left:0}100%{opacity:0;left:100%}}
+.qc{border-top:1px solid var(--rule);padding:12px 14px 14px;display:grid;gap:10px}
+.qc-sum{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pill{font:600 11.5px var(--mono);letter-spacing:.04em;padding:3px 8px;border-radius:3px;text-transform:uppercase}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.issues{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.issues button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:baseline;padding:8px 10px;border:1px solid var(--rule);border-radius:4px;cursor:pointer;font-size:14px}
+.issues button:hover,.issues button.sel{border-color:var(--accent);background:var(--accent-soft)}
+.issues button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.issues code{font:500 12.5px var(--mono)}
+.note{font-size:12.5px;color:var(--muted)}
+
+/* sections */
+section{padding-block:56px;border-top:1px solid var(--rule)}
+.head{display:grid;gap:10px;margin-bottom:28px}
+.problem{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.problem div{display:grid;gap:8px;align-content:start}
+.big{font-family:var(--display);font-stretch:75%;font-weight:800;font-size:46px;line-height:1;color:var(--accent)}
+.rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--rule);background:var(--sheet)}
+.rule{padding:20px;display:grid;gap:10px;align-content:start;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+.rule:nth-child(3n){border-right:0}.rule:nth-last-child(-n+3){border-bottom:0}
+.rule .eg{font:12.5px/1.5 var(--mono);color:var(--muted);border-left:2px solid var(--rule);padding-left:10px}
+.flow{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;counter-reset:s}
+.flow li{position:relative;padding:16px 14px 0 0;display:grid;gap:6px;align-content:start;counter-increment:s;min-width:0}
+.flow li::before{content:counter(s,decimal-leading-zero);font:500 12px var(--mono);color:var(--accent)}
+.flow li::after{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.flow li:nth-child(odd)::after{background:var(--ink)}
+.flow p{font-size:14px;color:var(--muted)}
+.sld{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;overflow-x:auto;margin-top:32px}
+.sld svg{display:block;min-width:720px;width:100%;height:auto}
+.report{margin-top:32px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:32px;padding:28px;border:1px solid var(--rule);border-top:3px solid var(--accent);background:var(--sheet);border-radius:6px}
+.report ul{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.report li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:15px}
+.report li:last-child{border-bottom:0}
+.report li b{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+@media (max-width:900px){.report{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:480px){.report li{grid-template-columns:minmax(0,1fr);gap:4px}}
+.tour{display:grid;gap:16px}
+.steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.steps button{all:unset;box-sizing:border-box;cursor:pointer;display:grid;gap:4px;padding:10px 12px 12px;border-top:3px solid var(--rule);color:var(--muted);font-size:13.5px;line-height:1.3;min-width:0}
+.steps button b{font:500 11.5px var(--mono);letter-spacing:.06em}
+.steps button[aria-selected="true"]{border-top-color:var(--accent);color:var(--ink);background:var(--sheet)}
+.steps button.done{border-top-color:var(--ink)}
+.steps button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stage{display:grid;grid-template-columns:minmax(0,2.3fr) minmax(0,1fr);gap:24px;align-items:start}
+.viewer{background:#0b111a;border:1px solid var(--rule);border-radius:6px;padding:12px;display:grid;place-items:center;min-height:240px;min-width:0}
+.imgwrap{position:relative;display:inline-block;max-width:100%;line-height:0}
+.imgwrap img{display:block;max-width:100%;max-height:600px;width:auto;height:auto;border-radius:3px;transition:opacity .25s}
+.imgwrap img.fading{opacity:.2}
+.spots{position:absolute;inset:0}
+.spot{all:unset;position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font:700 12px var(--body);display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 3px rgba(255,255,255,.85)}
+.spot::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--accent);animation:ping 1.8s ease-out infinite}
+.spot.on{background:#f2c511;color:#111}.spot.on::after{border-color:#f2c511}
+.spot:focus-visible{outline:2px solid #fff;outline-offset:3px}
+@keyframes ping{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.6);opacity:0}}
+.tip{position:absolute;z-index:3;width:min(260px,70vw);background:var(--sheet);color:var(--ink);border:1px solid var(--rule);border-radius:5px;padding:10px 12px;font:14px/1.45 var(--body);box-shadow:0 12px 30px -12px rgba(0,0,0,.5);pointer-events:none}
+.side{display:grid;gap:12px;align-content:start;min-width:0}
+.stitle{font-size:26px;font-stretch:80%;text-transform:uppercase}
+.side p{font-size:15.5px}
+.spotlist{margin:0;padding:0;list-style:none;display:grid;gap:6px;counter-reset:sp}
+.spotlist li{counter-increment:sp}
+.spotlist button{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:6px 8px;border-radius:4px;font-size:14px;width:100%}
+.spotlist button::before{content:counter(sp);width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font:700 11.5px var(--body);display:grid;place-items:center}
+.spotlist button.on,.spotlist button:hover{background:var(--accent-soft)}
+.spotlist button:focus-visible{outline:2px solid var(--accent)}
+.nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
+.navbtn{font:600 13.5px var(--body);padding:8px 14px;border-radius:5px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);cursor:pointer}
+.navbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.navbtn:disabled{opacity:.4;cursor:default}
+.linkbtn{all:unset;cursor:pointer;color:var(--accent);font-size:14px;text-decoration:underline;padding:4px}
+.linkbtn:focus-visible{outline:2px solid var(--accent)}
+.lightbox{position:fixed;inset:0;z-index:50;background:rgba(5,9,15,.92);display:grid;grid-template-rows:auto minmax(0,1fr);padding:calc(env(safe-area-inset-top,0px) + 12px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(16px,env(safe-area-inset-left,0px))}
+.lb-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#e7edf5;font:600 15px var(--body);padding-bottom:10px}
+.lb-body{overflow:auto;border-radius:4px}
+.lb-body img{display:block;max-width:none}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}.steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:480px){.spot{width:22px;height:22px;font-size:11px}}
+@media (prefers-reduced-motion:reduce){.spot::after{animation:none}.imgwrap img{transition:none}}
+.facts{padding-block:0 8px;border-top:0}
+.factgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;border:1px solid var(--rule);border-radius:6px;background:var(--sheet)}
+.factgrid div{padding:16px 18px;border-right:1px solid var(--rule);display:grid;gap:6px;align-content:start;min-width:0}
+.factgrid div:last-child{border-right:0}
+.factgrid dt{padding-top:0}
+.factgrid dd{font-size:14.5px}
+@media (max-width:900px){.factgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.factgrid div:nth-child(2){border-right:0}.factgrid div:nth-child(-n+2){border-bottom:1px solid var(--rule)}}
+@media (max-width:480px){.factgrid{grid-template-columns:minmax(0,1fr)}.factgrid div{border-right:0;border-bottom:1px solid var(--rule)}.factgrid div:last-child{border-bottom:0}}
+.calls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.call{display:grid;gap:10px;align-content:start}
+.call q{font-family:var(--display);font-stretch:85%;font-weight:700;font-size:22px;line-height:1.2;quotes:none}
+.stack{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:40px}
+dl{margin:0;display:grid;grid-template-columns:max-content minmax(0,1fr);gap:10px 20px;font-size:15px}
+dt{font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:3px}
+dd{margin:0}
+.research{background:var(--ink);color:var(--paper);border-radius:6px;padding:28px;display:grid;gap:12px}
+.research .label{color:inherit;opacity:.7}
+.research h3{font-size:22px;font-stretch:85%}
+footer{padding-block:24px 48px;border-top:1px solid var(--rule);display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;align-items:end}
+.contact{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.contact .mail{font:500 14.5px var(--mono);color:var(--ink);user-select:all;overflow-wrap:anywhere}
+.copy{font:600 13px var(--body);padding:7px 12px;border-radius:5px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);cursor:pointer}
+.btn{font:600 14px var(--body);padding:9px 16px;border-radius:5px;background:var(--accent);color:#fff;text-decoration:none}
+
+@media (max-width:900px){
+  .hero,.stack{grid-template-columns:minmax(0,1fr)}
+  .rules{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .rule:nth-child(3n){border-right:1px solid var(--rule)}.rule:nth-child(2n){border-right:0}
+  .rule:nth-last-child(-n+3){border-bottom:1px solid var(--rule)}.rule:nth-last-child(-n+2){border-bottom:0}
+  .flow{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:24px}
+  .calls,.problem{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .rules{grid-template-columns:minmax(0,1fr)}
+  .rule{border-right:0!important;border-bottom:1px solid var(--rule)!important}.rule:last-child{border-bottom:0!important}
+  .flow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){.scan.go{animation:none}.node{transition:none!important}}
+.node{transition:opacity .25s}
+</style>
+</head>
+<body>
+<div class="fibers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<main class="wrap">
+
+<header class="hero">
+  <div class="hero-copy">
+    <span class="label">Project case study · 2026 · built independently</span>
+    <h1>EPON Design <span class="blue">QC &amp; Validation</span> System</h1>
+    <p class="lede">A design tool for EPON FTTH designers that checks every pre-design against the design rules as it is drawn, so errors are caught and fixed before the design is handed off.</p>
+    <div class="chips">
+      <span class="chip">3-stage splitter architecture</span>
+      <span class="chip">Rule-based QC</span>
+      <span class="chip">Auto fiber assignment &amp; connectivity</span>
+      <span class="chip">DWG / DXF in &amp; out</span>
+      <span class="chip">QC report for documentation</span>
+      <span class="chip">Web app, runs in the browser</span>
+    </div>
+    <div class="who">
+      <span><b>Hanis Haziera</b> · Telecommunication Network Designer</span>
+      <span>FTTH / EPON · 5 years in telecommunications, on U.S. fibre programmes</span>
+      <div class="contact"><span class="mail" id="mail">hanishazierahashim@gmail.com</span><button class="copy" id="copy" type="button">Copy email</button></div>
+      <div class="contact"><a class="btn" href="http://www.linkedin.com/in/hanis-haziera-hashim">LinkedIn</a><a href="https://ikothang.github.io/portfolio/">Other projects</a></div>
+    </div>
+  </div>
+
+  <div class="demo" aria-label="Interactive QC demo with sample data">
+    <div class="demo-bar">
+      <div class="seg" role="group" aria-label="Splitter architecture">
+        <button id="m3" type="button" aria-pressed="true">3-stage split</button>
+        <button id="m2" type="button" aria-pressed="false">2-stage · planned</button>
+      </div>
+      <button class="run" id="run" type="button">Run QC</button>
+    </div>
+    <div class="canvas"><div class="scan" id="scan"></div><svg id="tree" viewBox="0 0 640 300" role="img" aria-label="Splitter tree from OLT port to homes"></svg></div>
+    <div class="qc">
+      <div class="qc-sum" id="sum"></div>
+      <ul class="issues" id="issues"></ul>
+      <p class="note" id="dnote">Illustration of the QC logic with sample data; the real screens are further down. Select an issue to find it on the drawing.</p>
+    </div>
+  </div>
+</header>
+
+<section class="facts" aria-label="Project facts">
+  <dl class="factgrid">
+    <div><dt>Role</dt><dd>FTTH design expert, product owner, developer and tester</dd></div>
+    <div><dt>Users</dt><dd>FTTH designers working on three-stage EPON pre-designs</dd></div>
+    <div><dt>Built with</dt><dd>HTML, CSS and JavaScript web app; drawing canvas; DWG/DXF import and export; PDF reports</dd></div>
+    <div><dt>Status</dt><dd>Piloted on a live project; in active development (2026)</dd></div>
+  </dl>
+</section>
+
+<section id="problem">
+  <div class="head"><span class="label">The problem</span><h2>Design errors were found too late</h2></div>
+  <div class="problem">
+    <div><span class="big">Manual</span><p>Splitter counts, port capacity, cable direction, naming and home counts were all checked by eye after the design was drawn.</p></div>
+    <div><span class="big">Late</span><p>Errors came back after the design was considered done, so the designer had to reopen it and rework it.</p></div>
+    <div><span class="big">Inconsistent</span><p>Two people could pass different designs. The rules lived in people's heads and a long standard document, not in the designer's workflow.</p></div>
+  </div>
+</section>
+
+<section id="workflow">
+  <div class="head"><span class="label">Workflow</span><h2>From drawing to hand-off</h2></div>
+  <ol class="flow">
+    <li><h3>Import</h3><p>Open the base drawing from DWG or DXF.</p></li>
+    <li><h3>Design</h3><p>Place splices, splitters, terminals and cables; draw service-area boundaries. Works with touch on a tablet.</p></li>
+    <li><h3>Validate</h3><p>Run QC at any point while designing and get a suggested fix for every issue.</p></li>
+    <li><h3>Rename</h3><p>Apply the naming convention to every element in one step.</p></li>
+    <li><h3>Assign fibers</h3><p>Fibers and splitter ports are assigned automatically, and the full connectivity is shown in the straight-line diagram.</p></li>
+    <li><h3>Hand off</h3><p>Hand over with confidence: export the QC report, BOM and DWG for the design record.</p></li>
+  </ol>
+  <div class="report">
+    <div style="display:grid;gap:10px;align-content:start"><span class="label">Built-in documentation</span><h3 style="font-size:26px;font-stretch:80%;text-transform:uppercase">Every design comes with its own QC report</h3><p>The report is produced from the same checks, so documentation is done the moment QC passes. Drafters and project leads get one consistent record of what was designed and what was checked.</p></div>
+    <ul>
+      <li><b>QC summary</b><span>Cable direction, splitter structure and capacity, with every critical error and warning and its suggested fix</span></li>
+      <li><b>Bill of materials</b><span>Splices, splitters by size, terminals by type, tail lengths and cable footage</span></li>
+      <li><b>PON size check</b><span>Architecture, allowed home-count range and port utilization for each service area</span></li>
+      <li><b>Terminal list</b><span>Every terminal with its address count, splitter name and tail length</span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="product">
+  <div class="head"><span class="label">The real system</span><h2>See it working</h2><p>A guided walk through the live tool, using a sample design with one deliberate capacity error. Tap the numbered dots to see what each part does.</p></div>
+  <div class="tour" id="tour">
+    <div class="steps" role="tablist" aria-label="Walkthrough steps" id="steps"></div>
+    <div class="stage">
+      <div class="viewer"><div class="imgwrap" id="imgwrap"><img id="tourImg" alt=""><div class="spots" id="spots"></div></div></div>
+      <div class="side">
+        <span class="label" id="stepNo"></span>
+        <h3 class="stitle" id="stepTitle"></h3>
+        <p id="stepText"></p>
+        <ol class="spotlist" id="spotList"></ol>
+        <div class="nav">
+          <button type="button" class="navbtn" id="prev">← Previous</button>
+          <button type="button" class="navbtn primary" id="next">Next →</button>
+          <button type="button" class="linkbtn" id="zoom">Open full size</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Full-size screenshot">
+    <div class="lb-bar"><span id="lbTitle"></span><button type="button" class="navbtn" id="lbClose">Close</button></div>
+    <div class="lb-body" id="lbBody"><img id="lbImg" alt=""></div>
+  </div>
+</section>
+
+<section id="rules">
+  <div class="head"><span class="label">What it checks</span><h2>The design standard, turned into rules</h2><p>Each check raises a <span class="pill crit">Critical</span> error or a <span class="pill warn">Warning</span>, and warnings that are acceptable for a design can be marked as accepted.</p></div>
+  <div class="rules">
+    <div class="rule"><h3>Splitter structure &amp; capacity</h3><p>Validates the 1st, 2nd and 3rd stage splitters in each service area, and that every 2nd-stage splitter feeds at least one downstream splitter.</p><span class="eg">OS0006 (1x4, 2nd stage): no 3rd-stage splitter connected</span></div>
+    <div class="rule"><h3>Home count per service area</h3><p>Adds up homes from every terminal inside each drawn service-area boundary and checks the total against the allowed range for the PON port.</p><span class="eg">Service area A: 120 homes, allowed 57–112 on a 1x128 PON</span></div>
+    <div class="rule"><h3>Cable direction</h3><p>Traces every fiber cable from the OLT outwards and flags cables drawn input-to-output the wrong way round.</p><span class="eg">Cable SP0002 → SP0001 runs upstream</span></div>
+    <div class="rule"><h3>Port reserve</h3><p>A terminal with a monitoring cable must keep one spare splitter port, so homes + 1 has to fit the port count.</p><span class="eg">NP0003: 8 homes + monitoring on 8 ports</span></div>
+    <div class="rule"><h3>Power &amp; monitoring</h3><p>A new OLT needs its power supply, power cable and monitoring cable. An existing, already-powered OLT must not get a second set.</p><span class="eg">New OLT has no power supply placed</span></div>
+    <div class="rule"><h3>Naming &amp; numbering</h3><p>Auto-renames splices, terminals, splitters and cables to the naming convention, with no duplicates inside a service area.</p><span class="eg">SP0001 · NP0001 · OS0001 · .01.0001</span></div>
+  </div>
+</section>
+
+<section id="build">
+  <div class="stack">
+    <div class="head" style="margin:0"><span class="label">Build &amp; roadmap</span><h2>One designer, end to end</h2>
+      <p>I turned five years of FTTH design and QA/QC experience into the rule set, then built and tested the tool myself using AI-assisted development. It is published as a web app, so it opens in any browser with nothing to install.</p>
+      <p>The aim is to put the full design standard in the designer's hands, so every design is right first time and goes out with confidence.</p>
+    </div>
+    <div class="research">
+      <span class="label">Next on the roadmap</span>
+      <h3>Two-stage splitter support</h3>
+      <p>The tool validates three-stage designs today. Next, I am adding two-stage architecture rules so the same checks, fiber assignment and reports work for both. The 2-stage view in the illustration at the top previews that direction.</p>
+      <p>Alongside it: continued tuning of QC accuracy and smarter splitter placement suggestions.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p class="note" style="flex-basis:100%">All screens and names on this page are sample data. Client, operator and design-standard details are withheld.</p>
+</footer>
+</main>
+<script>
+(function(){
+  const STEPS=[
+   {t:"Design",title:"Design on the canvas",src:"shots/1-canvas.png",w:1913,h:908,
+    text:"Draw the pre-design over the imported base drawing. The service-area boundary counts homes as you place terminals.",
+    spots:[[5.5,14,"Element menu: fiber cables, terminals, splices, MDU boxes, OLT housing, power supply and service-area boundaries."],
+           [48.1,10.3,"Live home count for the service area: 94 homes, updated as terminals are added or moved."],
+           [72.7,2.8,"QC Validation runs every design rule in one click."],
+           [78.7,2.8,"Auto Rename applies the naming convention to every element at once."],
+           [92.3,2.8,"SLD Generator and Report build the hand-off documents from the same design."]]},
+   {t:"Run QC",title:"Run QC validation",src:"shots/2-qc.png",w:719,h:818,
+    text:"QC finds one warning and one critical error, each with its location, cause and a suggested fix, while the design is still open.",
+    spots:[[8.5,30.7,"Warning: an OTE terminal is the last device on the run, which the standard does not allow."],
+           [88,30.5,"Ignore accepts a warning that is intended. View jumps to the element on the drawing."],
+           [8.5,48,"Critical: 17 second-stage splitters on a first-stage 1x16, which allows only 16."],
+           [58.7,89.7,"Service-area summary: 94 homes against an allowed 57–112, with port utilization."]]},
+   {t:"Fix warning",title:"Fix the warning",src:"shots/3-fix-warning.png",w:1908,h:901,
+    text:"View opens terminal N6 with its properties. The fix is one setting: change the terminal type, or mark it as a future-area terminal.",
+    spots:[[31.3,46,"Terminal N6, opened straight from the QC result."],
+           [92.6,29.6,"Change the terminal type here."],
+           [92.9,63.6,"Live port check: 5 homes, 3 ports still available."]]},
+   {t:"Fix critical",title:"Fix the critical error",src:"shots/4-fix-critical.png",w:1901,h:846,
+    text:"Following the suggestion, the area is split into two PONs. Both now sit inside their allowed range and QC passes.",
+    spots:[[42.3,16.7,"Service area A drops to 62 homes."],
+           [62.3,51.4,"New service area B takes 32 homes on its own PON."]]},
+   {t:"Assign fibers",title:"Auto fiber assignment",src:"shots/5-sld.png",w:1079,h:817,
+    text:"The straight-line diagram is generated from the design's real connectivity. Fibers and splitter ports are assigned automatically for both service areas.",
+    spots:[[5.4,41.5,"OLT and pigtail: each PON's feeder fiber is assigned at the first splice."],
+           [58.6,31.7,"Service area A: every splitter port and fiber assigned down to each terminal."],
+           [74.5,67.8,"Service area B, assigned the same way."],
+           [90.9,3.3,"Export the SLD as PDF for the drafter."],
+           [49,96.9,"Missing or invalid connections are flagged as errors, never invented."]]},
+   {t:"Report",title:"Report for documentation",src:"shots/6-report.png",w:1051,h:780,
+    text:"The report is built from the same design, so documentation is ready the moment QC passes.",
+    spots:[[6.5,34,"Bill of materials counted straight from the design: splices, splitters, terminals, tails and cable."],
+           [75.5,21.5,"PON size check per service area: allowed range and port utilization."],
+           [57,54.5,"Terminal list with auto-assigned names, address counts and tail lengths."]]}
+  ];
+  STEPS.forEach(s=>{const i=new Image(); i.src=s.src;});
+  let cur=0, active=-1;
+  const $=id=>document.getElementById(id);
+  const stepsEl=$('steps'), img=$('tourImg'), spotsEl=$('spots'), list=$('spotList');
+  STEPS.forEach((s,i)=>{
+    const b=document.createElement('button'); b.type='button'; b.setAttribute('role','tab'); b.id='step-'+i;
+    b.innerHTML='<b>0'+(i+1)+'</b><span></span>'; b.querySelector('span').textContent=s.t;
+    b.addEventListener('click',()=>go(i)); stepsEl.append(b);
+  });
+  function tip(k){
+    spotsEl.querySelectorAll('.tip').forEach(t=>t.remove());
+    spotsEl.querySelectorAll('.spot').forEach((d,j)=>d.classList.toggle('on',j===k));
+    list.querySelectorAll('button').forEach((d,j)=>d.classList.toggle('on',j===k));
+    active=k; if(k<0) return;
+    const [x,y,txt]=STEPS[cur].spots[k];
+    const t=document.createElement('div'); t.className='tip'; t.textContent=txt; spotsEl.append(t);
+    const W=spotsEl.clientWidth, H=spotsEl.clientHeight, tw=t.offsetWidth, th=t.offsetHeight;
+    let left=x/100*W+18, top=y/100*H-th/2;
+    if(left+tw>W) left=x/100*W-18-tw;
+    if(left<4) left=Math.max(4,Math.min(W-tw-4,x/100*W-tw/2));
+    top=Math.max(4,Math.min(H-th-4,top));
+    t.style.left=left+'px'; t.style.top=top+'px';
+  }
+  function go(i){
+    cur=Math.max(0,Math.min(STEPS.length-1,i)); const s=STEPS[cur];
+    stepsEl.querySelectorAll('button').forEach((b,j)=>{b.setAttribute('aria-selected',j===cur);b.classList.toggle('done',j<cur);b.tabIndex=j===cur?0:-1;});
+    img.classList.add('fading');
+    const show=()=>{img.classList.remove('fading');};
+    img.onload=show; img.src=s.src; img.alt=s.title; img.width=s.w; img.height=s.h; if(img.complete) show();
+    $('stepNo').textContent='Step '+(cur+1)+' of '+STEPS.length;
+    $('stepTitle').textContent=s.title; $('stepText').textContent=s.text;
+    spotsEl.replaceChildren(); list.replaceChildren();
+    s.spots.forEach((sp,k)=>{
+      const d=document.createElement('button'); d.type='button'; d.className='spot'; d.textContent=k+1;
+      d.style.left=sp[0]+'%'; d.style.top=sp[1]+'%'; d.setAttribute('aria-label','Point '+(k+1)+': '+sp[2]);
+      d.addEventListener('click',e=>{e.stopPropagation(); tip(active===k?-1:k);});
+      d.addEventListener('mouseenter',()=>tip(k));
+      spotsEl.append(d);
+      const li=document.createElement('li'), b=document.createElement('button'); b.type='button'; b.append(document.createElement('span')); b.lastChild.textContent=sp[2];
+      b.addEventListener('click',()=>tip(active===k?-1:k)); b.addEventListener('mouseenter',()=>tip(k)); li.append(b); list.append(li);
+    });
+    active=-1;
+    $('prev').disabled=cur===0; $('next').textContent=cur===STEPS.length-1?'Start again ↺':'Next →';
+  }
+  $('prev').addEventListener('click',()=>go(cur-1));
+  $('next').addEventListener('click',()=>go(cur===STEPS.length-1?0:cur+1));
+  $('imgwrap').addEventListener('click',()=>tip(-1));
+  stepsEl.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){go(cur+1);stepsEl.children[cur].focus();} if(e.key==='ArrowLeft'){go(cur-1);stepsEl.children[cur].focus();}});
+  const lb=$('lightbox');
+  $('zoom').addEventListener('click',()=>{const s=STEPS[cur]; $('lbImg').src=s.src; $('lbImg').alt=s.title; $('lbTitle').textContent=(cur+1)+' · '+s.title; lb.hidden=false; $('lbClose').focus();});
+  const close=()=>{lb.hidden=true; $('zoom').focus();};
+  $('lbClose').addEventListener('click',close);
+  lb.addEventListener('click',e=>{if(e.target===lb) close();});
+  document.addEventListener('keydown',e=>{if(!lb.hidden&&e.key==='Escape') close();});
+  window.addEventListener('resize',()=>{if(active>=0) tip(active);});
+  go(0);
+})();
+</script>
+
+<script>
+(function(){
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  // Sample designs. stage: splitter stage; homes: homes served; ports: splitter output ports
+  const DESIGNS = {
+    2: { root:{id:"OLT · PON A", kind:"olt", kids:[
+          {id:"SP0001", kind:"splice", os:"OS0005 1x4", stage:"1st", kids:[
+            {id:"NP0001", kind:"nap", os:"1x8", stage:"2nd", homes:8},
+            {id:"NP0002", kind:"nap", os:"1x8", stage:"2nd", homes:6},
+            {id:"NP0003", kind:"nap", os:"1x8", stage:"2nd", homes:8, mon:true},
+            {id:"NP0004", kind:"nap", os:"1x8", stage:"2nd", homes:0}]}]},
+        issues:[
+          {sev:"crit", el:"NP0003", msg:"8 homes + monitoring need 9 ports; 1x8 has 8. Upsize or move a drop."},
+          {sev:"warn", el:"NP0004", msg:"Home count is 0 and no monitoring cable is attached."},
+          {sev:"ok", el:"PON A", msg:"22 homes, within the 1–32 range for this port."}]},
+    3: { root:{id:"OLT · PON B", kind:"olt", kids:[
+          {id:"SP0001", kind:"splice", os:"OS0007 1x4", stage:"1st", kids:[
+            {id:"SP0002", kind:"splice", os:"OS0008 1x4", stage:"2nd", kids:[
+              {id:"NP0001", kind:"nap", os:"1x2", stage:"3rd", homes:2},
+              {id:"NP0002", kind:"nap", os:"1x2", stage:"3rd", homes:1},
+              {id:"BX0001", kind:"box", os:"1x8", stage:"3rd", homes:7}]},
+            {id:"SP0003", kind:"splice", os:"OS0006 1x2", stage:"2nd", kids:[]}]}]},
+        issues:[
+          {sev:"crit", el:"SP0003", msg:"2nd-stage OS0006 (1x2) has no 3rd-stage splitter connected."},
+          {sev:"warn", el:"SP0002", msg:"Cable from SP0002 to NP0002 is drawn upstream; reverse its direction."},
+          {sev:"ok", el:"BX0001", msg:"7 homes on 1x8 leaves 1 open port. Already the best fit, no warning."}]}
+  };
+  let mode = 3, sel = null;
+  const svg = document.getElementById('tree');
+  const NS = "http://www.w3.org/2000/svg";
+  const mk = (t, a, txt) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; return e; };
+
+  function layout(root){
+    const cols = [30, 175, 330, 485]; let leaf = 0; const nodes = [];
+    (function walk(n, d){
+      n.d = d; n.x = cols[d];
+      if (!n.kids || !n.kids.length){ n.y = leaf++; }
+      else { n.kids.forEach(k => walk(k, d+1)); n.y = (n.kids[0].y + n.kids[n.kids.length-1].y)/2; }
+      nodes.push(n);
+    })(root, 0);
+    const gap = 250 / Math.max(leaf-1, 1);
+    nodes.forEach(n => n.py = 30 + n.y * gap);
+    return nodes;
+  }
+  function draw(){
+    const D = DESIGNS[mode]; const nodes = layout(D.root);
+    const sevOf = id => { const i = D.issues.find(x => x.el === id && x.sev !== 'ok'); return i ? i.sev : null; };
+    svg.replaceChildren();
+    const ink = css('--ink'), muted = css('--muted'), sheet = css('--sheet'), rule = css('--rule'), acc = css('--accent');
+    const col = { crit: css('--crit'), warn: css('--warn') };
+    nodes.forEach(n => (n.kids||[]).forEach(k => {
+      const mx = (n.x + 120 + k.x) / 2;
+      svg.append(mk('path', {d:`M${n.x+120} ${n.py} H${mx} V${k.py} H${k.x}`, fill:'none', stroke:acc, 'stroke-width':1.6}));
+    }));
+    nodes.forEach(n => {
+      const s = sevOf(n.id); const g = mk('g', {class:'node', 'data-id':n.id});
+      const dim = sel && sel !== n.id && !(sel === 'PON A' && n.kind === 'olt');
+      g.style.opacity = dim ? .35 : 1;
+      const w = 120, h = n.kind === 'olt' ? 30 : 38;
+      g.append(mk('rect', {x:n.x, y:n.py-h/2, width:w, height:h, rx:n.kind==='nap'||n.kind==='box'?14:3,
+        fill: sheet, stroke: s ? col[s] : (n.kind==='olt'? ink : rule), 'stroke-width': s ? 2.4 : 1.4}));
+      g.append(mk('text', {x:n.x+10, y:n.py-(n.kind==='olt'?-4:3), fill:ink, 'font-family':css('--mono'), 'font-size':12, 'font-weight':600}, n.id));
+      if (n.kind !== 'olt'){
+        const sub = `${n.os} · ${n.stage}` + (n.homes != null ? ` · ${n.homes}h` : '') + (n.mon ? ' · MON' : '');
+        g.append(mk('text', {x:n.x+10, y:n.py+12, fill:muted, 'font-family':css('--mono'), 'font-size':10}, sub));
+      }
+      if (s){
+        g.append(mk('circle', {cx:n.x+w, cy:n.py-h/2, r:8, fill:col[s]}));
+        g.append(mk('text', {x:n.x+w, y:n.py-h/2+4, fill:sheet, 'font-size':11, 'font-weight':700, 'text-anchor':'middle', 'font-family':css('--body')}, '!'));
+      }
+      svg.append(g);
+    });
+    const labels = mode === 2 ? ['OLT','1st stage','2nd stage'] : ['OLT','1st stage','2nd stage','3rd stage'];
+    labels.forEach((t,i) => svg.append(mk('text', {x:[30,175,330,485][i], y:294, fill:muted, 'font-family':css('--mono'), 'font-size':10, 'letter-spacing':'.08em'}, t.toUpperCase())));
+    renderIssues(D);
+  }
+  function renderIssues(D){
+    const c = s => D.issues.filter(i => i.sev === s).length;
+    document.getElementById('sum').innerHTML =
+      `<span class="pill crit">${c('crit')} critical</span><span class="pill warn">${c('warn')} warning</span><span class="pill ok">${c('ok')} passed note</span>`;
+    const ul = document.getElementById('issues'); ul.replaceChildren();
+    D.issues.forEach(i => {
+      const li = document.createElement('li'); const b = document.createElement('button'); b.type = 'button';
+      if (sel === i.el) b.classList.add('sel');
+      b.innerHTML = `<span class="pill ${i.sev}">${i.sev === 'crit' ? 'Critical' : i.sev === 'warn' ? 'Warning' : 'Pass'}</span><code></code><span></span>`;
+      b.querySelector('code').textContent = i.el; b.querySelector('span:last-child').textContent = i.msg;
+      b.addEventListener('click', () => { sel = sel === i.el ? null : i.el; draw(); });
+      li.append(b); ul.append(li);
+    });
+  }
+  function setMode(m){
+    mode = m; sel = null;
+    document.getElementById('m2').setAttribute('aria-pressed', m === 2);
+    document.getElementById('m3').setAttribute('aria-pressed', m === 3);
+    document.getElementById('dnote').textContent = m === 2 ? 'Illustration of planned two-stage support, sample data. Select an issue to find it on the drawing.' : 'Illustration of the QC logic with sample data; the real screens are further down. Select an issue to find it on the drawing.';
+    draw(); scan();
+  }
+  function scan(){ const s = document.getElementById('scan'); s.classList.remove('go'); void s.offsetWidth; s.classList.add('go'); }
+  document.getElementById('m2').addEventListener('click', () => setMode(2));
+  document.getElementById('m3').addEventListener('click', () => setMode(3));
+  document.getElementById('run').addEventListener('click', () => { sel = null; draw(); scan(); });
+
+  // SLD excerpt
+  function sld(){
+    const s = document.getElementById('sld'); if (!s) return; s.replaceChildren();
+    const ink = css('--ink'), muted = css('--muted'), acc = css('--accent'), rule = css('--rule'), sheet = css('--sheet');
+    const mono = css('--mono');
+    const boxes = [{x:20,t:'OLT',sub:'PON A · Fiber 13'},{x:260,t:'SP0001',sub:'OS0005 1x4 · 1st'},{x:520,t:'SP0002',sub:'OS0006 1x4 · 2nd'},{x:780,t:'NP0001',sub:'OS0001 1x2 · 3rd'}];
+    s.append(mk('line',{x1:160,y1:80,x2:780,y2:80,stroke:acc,'stroke-width':2.5}));
+    boxes.forEach(b => {
+      s.append(mk('rect',{x:b.x,y:52,width:140,height:56,rx:3,fill:sheet,stroke:ink,'stroke-width':1.4}));
+      s.append(mk('text',{x:b.x+10,y:76,fill:ink,'font-family':mono,'font-size':13,'font-weight':600},b.t));
+      s.append(mk('text',{x:b.x+10,y:95,fill:muted,'font-family':mono,'font-size':10.5},b.sub));
+    });
+    const lab = [[168,'24ct pigtail → 48ct · Fiber 48'],[428,'48ct · Fiber 48 · OS port 1'],[688,'48ct · Fiber 47 · OS port 2']];
+    lab.forEach(([x,t]) => s.append(mk('text',{x,y:70,fill:ink,'font-family':mono,'font-size':10.5},t)));
+    s.append(mk('text',{x:428,y:128,fill:muted,'font-family':mono,'font-size':10.5},'Fiber 1–46 straight through · dark'));
+    s.append(mk('line',{x1:850,y1:108,x2:850,y2:150,stroke:acc,'stroke-width':1.6,'stroke-dasharray':'4 3'}));
+    s.append(mk('text',{x:790,y:168,fill:muted,'font-family':mono,'font-size':10.5},'1ct tether · TAIL 150 ft'));
+    s.append(mk('text',{x:20,y:30,fill:muted,'font-family':mono,'font-size':10.5,'letter-spacing':'.08em'},'STRAIGHT-LINE DIAGRAM · PON A · SAMPLE'));
+  }
+
+  document.getElementById('copy').addEventListener('click', e => {
+    const btn = e.currentTarget, text = document.getElementById('mail').textContent;
+    const done = () => { btn.textContent = 'Copied'; setTimeout(() => btn.textContent = 'Copy email', 1600); };
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById('mail')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Press Ctrl+C'; };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch(_) { fallback(); }
+  });
+
+  const redraw = () => { draw(); sld(); };
+  redraw();
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redraw); } catch(_){}
+  new MutationObserver(redraw).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+})();
+</script>
+</body>
+</html>
